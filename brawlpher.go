@@ -21,14 +21,12 @@ func WithClient(c internal.Requester) Option {
 	}
 }
 
-func NewClient(apiKey string, options ...Option) *Client {
+func NewClient(apiKey string) *Client {
 	c := &Client{
 		client: http.DefaultClient,
 		apiKey: apiKey,
 	}
-	for _, opt := range options {
-		opt(c)
-	}
+
 	baseClient := internal.NewClient(c.apiKey, c.client)
 	c.Brawl = bs.NewClient(baseClient)
 	return c
