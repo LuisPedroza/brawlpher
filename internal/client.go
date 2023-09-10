@@ -12,7 +12,7 @@ import (
 
 const (
 	apiURLFormat              = "%s://%s%s"
-	baseURL                   = "bsproxy.royaleapi.dev"
+	baseURL                   = "bsproxy.royaleapi.dev/v1"
 	scheme                    = "https"
 	apiTokenHeaderKey         = "Authorization"
 	apiTokenHeaderValueFormat = "Bearer %s"
