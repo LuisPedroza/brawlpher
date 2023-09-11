@@ -3,6 +3,7 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -20,18 +21,25 @@ const (
 type Client struct {
 	APIKey string
 	Client Requester
+	Logger slog.Logger
 }
 
-func NewClient(apiKey string, client Requester) *Client {
+func NewClient(apiKey string, client Requester, logger slog.Logger) *Client {
 	return &Client{
 		APIKey: apiKey,
 		Client: client,
+		Logger: logger,
 	}
 }
 
 func (c *Client) NewRequest(method, endpoint string, pagination *api.PaginationQueryItems) (*http.Request, error) {
 	request, err := http.NewRequest(method, fmt.Sprintf(apiURLFormat, scheme, baseURL, endpoint), nil)
 	if err != nil {
+		c.Logger.Debug("NewRequest",
+			slog.String("package", "internal"),
+			slog.String("type", "Client"),
+			slog.String("endpoint", endpoint),
+			slog.String("error", err.Error()))
 		return nil, err
 	}
 
@@ -59,11 +67,21 @@ func (c *Client) NewRequest(method, endpoint string, pagination *api.PaginationQ
 func (c *Client) DoRequest(method, endpoint string, pagination *api.PaginationQueryItems) (*http.Response, error) {
 	request, err := c.NewRequest(method, endpoint, pagination)
 	if err != nil {
+		c.Logger.Debug("DoRequest",
+			slog.String("package", "internal"),
+			slog.String("type", "Client"),
+			slog.String("endpoint", endpoint),
+			slog.String("error", err.Error()))
 		return nil, err
 	}
 
 	response, err := c.Client.Do(request)
 	if err != nil {
+		c.Logger.Debug("DoRequest",
+			slog.String("package", "internal"),
+			slog.String("type", "Client"),
+			slog.String("endpoint", endpoint),
+			slog.String("error", err.Error()))
 		return nil, err
 	}
 
@@ -71,6 +89,11 @@ func (c *Client) DoRequest(method, endpoint string, pagination *api.PaginationQu
 		time.Sleep(time.Second)
 		response, err = c.Client.Do(request)
 		if err != nil {
+			c.Logger.Debug("DoRequest",
+				slog.String("package", "internal"),
+				slog.String("type", "Client"),
+				slog.String("endpoint", endpoint),
+				slog.String("error", err.Error()))
 			return nil, err
 		}
 	}
@@ -79,8 +102,19 @@ func (c *Client) DoRequest(method, endpoint string, pagination *api.PaginationQu
 		if !ok {
 			err = api.Error{Message: "unknown error", StatusCode: response.StatusCode}
 		}
+		c.Logger.Debug("DoRequest",
+			slog.String("package", "internal"),
+			slog.String("type", "Client"),
+			slog.String("endpoint", endpoint),
+			slog.String("error", err.Error()))
 		return nil, err
 	}
+
+	c.Logger.Info("DoRequest",
+		slog.String("package", "internal"),
+		slog.String("type", "Client"),
+		slog.String("endpoint", endpoint),
+		slog.Int64("contentLength", response.ContentLength))
 
 	return response, nil
 }
@@ -100,11 +134,30 @@ func (c *Client) GetInto(endpoint string, target interface{}, paginationSetters 
 		setter(pagination)
 	}
 
+	c.Logger.Info("GetInto",
+		slog.String("package", "internal"),
+		slog.String("type", "Client"),
+		slog.String("endpoint", endpoint),
+		slog.Group("queryItems",
+			slog.String("before", pagination.Before),
+			slog.String("after", pagination.After),
+			slog.Int("limit", pagination.Limit)))
+
 	response, err := c.Get(endpoint, pagination)
 	if err != nil {
+		c.Logger.Debug("GetInto",
+			slog.String("package", "internal"),
+			slog.String("type", "Client"),
+			slog.String("endpoint", endpoint),
+			slog.String("error", err.Error()))
 		return err
 	}
 	if err := json.NewDecoder(response.Body).Decode(target); err != nil {
+		c.Logger.Debug("GetInto",
+			slog.String("package", "internal"),
+			slog.String("type", "Client"),
+			slog.String("endpoint", endpoint),
+			slog.String("error", err.Error()))
 		return err
 	}
 	return nil
