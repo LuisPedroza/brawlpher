@@ -13,5 +13,14 @@ type Brawler struct {
 }
 
 type Brawlers struct {
-	Items []Brawler `json:"items"`
+	Items  []Brawler `json:"items"`
+	Paging *Paging   `json:"paging,omitempty"`
+}
+
+type Paging struct {
+	Cursors Cursors `json:"cursors"`
+}
+
+type Cursors struct {
+	After string `json:"after"`
 }
