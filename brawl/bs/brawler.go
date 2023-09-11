@@ -3,6 +3,7 @@ package bs
 import (
 	"fmt"
 
+	"github.com/LuisPedroza/brawlpher/api"
 	"github.com/LuisPedroza/brawlpher/internal"
 )
 
@@ -18,9 +19,9 @@ func (c *BrawlerClient) GetBrawlerByID(brawlerID string) (*Brawler, error) {
 	return brawler, nil
 }
 
-func (c *BrawlerClient) GetAllBrawlers() (*Brawlers, error) {
+func (c *BrawlerClient) GetAllBrawlers(paginationSetters ...api.PaginationOption) (*Brawlers, error) {
 	var brawlers *Brawlers
-	if err := c.c.GetInto(allBrawlers, &brawlers); err != nil {
+	if err := c.c.GetInto(allBrawlers, &brawlers, paginationSetters...); err != nil {
 		return nil, err
 	}
 	return brawlers, nil

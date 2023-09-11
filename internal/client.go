@@ -3,7 +3,6 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -30,8 +29,8 @@ func NewClient(apiKey string, client Requester) *Client {
 	}
 }
 
-func (c *Client) NewRequest(method, endpoint string, body io.Reader) (*http.Request, error) {
-	request, err := http.NewRequest(method, fmt.Sprintf(apiURLFormat, scheme, baseURL, endpoint), body)
+func (c *Client) NewRequest(method, endpoint string, pagination *api.PaginationQueryItems) (*http.Request, error) {
+	request, err := http.NewRequest(method, fmt.Sprintf(apiURLFormat, scheme, baseURL, endpoint), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -39,12 +38,26 @@ func (c *Client) NewRequest(method, endpoint string, body io.Reader) (*http.Requ
 	request.Header.Add(apiTokenHeaderKey, fmt.Sprintf(apiTokenHeaderValueFormat, c.APIKey))
 	request.Header.Add("Accept", "application/json")
 
+	if pagination != nil {
+		q := request.URL.Query()
+		if pagination.After != "" {
+			q.Add("after", pagination.After)
+		}
+		if pagination.Before != "" {
+			q.Add("before", pagination.Before)
+		}
+		if pagination.Limit != 0 {
+			q.Add("limit", fmt.Sprintf("%d", pagination.Limit))
+		}
+		request.URL.RawQuery = q.Encode()
+	}
+
 	return request, nil
 
 }
 
-func (c *Client) DoRequest(method, endpoint string, body io.Reader) (*http.Response, error) {
-	request, err := c.NewRequest(method, endpoint, body)
+func (c *Client) DoRequest(method, endpoint string, pagination *api.PaginationQueryItems) (*http.Response, error) {
+	request, err := c.NewRequest(method, endpoint, pagination)
 	if err != nil {
 		return nil, err
 	}
@@ -72,12 +85,22 @@ func (c *Client) DoRequest(method, endpoint string, body io.Reader) (*http.Respo
 	return response, nil
 }
 
-func (c *Client) Get(endpoint string) (*http.Response, error) {
-	return c.DoRequest("GET", endpoint, nil)
+func (c *Client) Get(endpoint string, pagination *api.PaginationQueryItems) (*http.Response, error) {
+	return c.DoRequest("GET", endpoint, pagination)
 }
 
-func (c *Client) GetInto(endpoint string, target interface{}) error {
-	response, err := c.Get(endpoint)
+func (c *Client) GetInto(endpoint string, target interface{}, paginationSetters ...api.PaginationOption) error {
+	pagination := &api.PaginationQueryItems{
+		Before: "",
+		After:  "",
+		Limit:  0,
+	}
+
+	for _, setter := range paginationSetters {
+		setter(pagination)
+	}
+
+	response, err := c.Get(endpoint, pagination)
 	if err != nil {
 		return err
 	}
